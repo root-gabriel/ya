@@ -2,10 +2,10 @@ package api
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/root-gabriel/ya/internal/config"
-	"github.com/root-gabriel/ya/internal/handlers"
-	"github.com/root-gabriel/ya/internal/middlewares"
-	"github.com/root-gabriel/ya/internal/storage"
+	"github.com/lionslon/go-yapmetrics/internal/config"
+	"github.com/lionslon/go-yapmetrics/internal/handlers"
+	"github.com/lionslon/go-yapmetrics/internal/middlewares"
+	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
 	"log"
 )
@@ -52,6 +52,9 @@ func New() *APIServer {
 
 	apiS.echo.Use(middlewares.WithLogging())
 	apiS.echo.Use(middlewares.GzipUnpacking())
+	if cfg.SignPass != "" {
+		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
+	}
 
 	apiS.echo.GET("/", handler.AllMetricsValues())
 	apiS.echo.POST("/value/", handler.GetValueJSON())

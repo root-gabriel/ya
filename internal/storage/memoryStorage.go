@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/root-gabriel/ya/internal/models"
+	"github.com/lionslon/go-yapmetrics/internal/models"
 	"net/http"
 )
 
