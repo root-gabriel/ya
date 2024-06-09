@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env"
-	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"github.com/root-gabriel/ya/internal/storage"
 	"go.uber.org/zap"
 )
 

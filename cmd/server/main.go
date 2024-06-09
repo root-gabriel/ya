@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/lionslon/go-yapmetrics/internal/api"
+	"github.com/root-gabriel/ya/internal/api"
 )
 
 func main() {
