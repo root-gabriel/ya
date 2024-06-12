@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/models"
+	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"net/http"
 )
 
 type handler struct {
-	store storageUpdater
+	store *storage.MemStorage
 }
 
 func New(stor *storage.MemStorage) *handler {
@@ -17,7 +18,6 @@ func New(stor *storage.MemStorage) *handler {
 	}
 }
 
-// UpdateMetrics handles POST requests to update metric values
 func (h *handler) UpdateMetrics() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		var m models.Metrics
@@ -43,7 +43,6 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 	}
 }
 
-// MetricsValue handles POST requests to get metric values
 func (h *handler) MetricsValue() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		var m models.Metrics
@@ -69,7 +68,6 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 	}
 }
 
-// AllMetrics handles GET requests to retrieve all metrics
 func (h *handler) AllMetrics() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		allMetrics := h.store.AllMetrics()

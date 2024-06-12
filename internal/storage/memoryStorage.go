@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"encoding/json"
 	"sync"
+
+	"github.com/lionslon/go-yapmetrics/internal/models"
 )
 
 type MemStorage struct {
@@ -17,54 +20,63 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (s *MemStorage) UpdateCounter(id string, value int64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.counters[id] += value
+func (m *MemStorage) UpdateCounter(key string, value int64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.counters[key] += value
 }
 
-func (s *MemStorage) UpdateGauge(id string, value float64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.gauges[id] = value
+func (m *MemStorage) UpdateGauge(key string, value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.gauges[key] = value
 }
 
-func (s *MemStorage) GetCounterValue(id string) (int64, int) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	value, ok := s.counters[id]
+func (m *MemStorage) GetCounterValue(key string) (int64, int) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	value, ok := m.counters[key]
 	if !ok {
-		return 0, http.StatusNotFound
+		return 0, 404
 	}
-	return value, http.StatusOK
+	return value, 200
 }
 
-func (s *MemStorage) GetGaugeValue(id string) (float64, int) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	value, ok := s.gauges[id]
+func (m *MemStorage) GetGaugeValue(key string) (float64, int) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	value, ok := m.gauges[key]
 	if !ok {
-		return 0, http.StatusNotFound
+		return 0, 404
 	}
-	return value, http.StatusOK
+	return value, 200
 }
 
-func (s *MemStorage) AllMetrics() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	// Возвращаем все метрики в виде JSON-строки
-	// Реализация зависит от вашего формата
-}
+func (m *MemStorage) AllMetrics() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-func (s *MemStorage) StoreBatch(metrics []models.Metrics) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, m := range metrics {
-		if m.MType == "counter" && m.Delta != nil {
-			s.counters[m.ID] += *m.Delta
-		} else if m.MType == "gauge" && m.Value != nil {
-			s.gauges[m.ID] = *m.Value
-		}
+	allMetrics := make([]models.Metrics, 0, len(m.counters)+len(m.gauges))
+
+	for key, value := range m.counters {
+		delta := value
+		allMetrics = append(allMetrics, models.Metrics{
+			ID:    key,
+			MType: "counter",
+			Delta: &delta,
+		})
 	}
+
+	for key, value := range m.gauges {
+		val := value
+		allMetrics = append(allMetrics, models.Metrics{
+			ID:    key,
+			MType: "gauge",
+			Value: &val,
+		})
+	}
+
+	jsonMetrics, _ := json.Marshal(allMetrics)
+	return string(jsonMetrics)
 }
 
