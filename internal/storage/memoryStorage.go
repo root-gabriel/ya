@@ -1,101 +1,81 @@
 package storage
 
 import (
-	"fmt"
-	"github.com/root-gabriel/ya/internal/models"
-	"net/http"
+    "encoding/json"
+    "sync"
+    "github.com/root-gabriel/ya/internal/models"
 )
 
-type gauge float64
-type counter int64
-
 type MemStorage struct {
-	GaugeData   map[string]gauge   `json:"gauge"`
-	CounterData map[string]counter `json:"counter"`
+    mu       sync.RWMutex
+    counters map[string]int64
+    gauges   map[string]float64
 }
 
-//type AllMetrics struct {
-//	Gauge   map[string]gauge   `json:"gauge"`
-//	Counter map[string]counter `json:"counter"`
-//}
-
-func NewMem() *MemStorage {
-	storage := MemStorage{
-		GaugeData:   make(map[string]gauge),
-		CounterData: make(map[string]counter),
-	}
-
-	return &storage
+func NewMemStorage() *MemStorage {
+    return &MemStorage{
+        counters: make(map[string]int64),
+        gauges:   make(map[string]float64),
+    }
 }
 
-func (s *MemStorage) UpdateCounter(n string, v int64) {
-	s.CounterData[n] += counter(v)
+func (m *MemStorage) UpdateCounter(key string, value int64) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.counters[key] += value
 }
 
-func (s *MemStorage) UpdateGauge(n string, v float64) {
-	s.GaugeData[n] = gauge(v)
+func (m *MemStorage) UpdateGauge(key string, value float64) {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.gauges[key] = value
 }
 
-func (s *MemStorage) GetValue(t string, n string) (string, int) {
-	var v string
-	statusCode := http.StatusOK
-	if val, ok := s.GaugeData[n]; ok && t == "gauge" {
-		v = fmt.Sprint(val)
-	} else if val, ok := s.CounterData[n]; ok && t == "counter" {
-		v = fmt.Sprint(val)
-	} else {
-		statusCode = http.StatusNotFound
-	}
-	return v, statusCode
+func (m *MemStorage) GetCounterValue(key string) (int64, int) {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    value, ok := m.counters[key]
+    if !ok {
+        return 0, http.StatusNotFound
+    }
+    return value, http.StatusOK
 }
 
-func (s *MemStorage) AllMetrics() string {
-	var result string
-	result += "Gauge metrics:\n"
-	for n, v := range s.GaugeData {
-		result += fmt.Sprintf("- %s = %f\n", n, v)
-	}
-
-	result += "Counter metrics:\n"
-	for n, v := range s.CounterData {
-		result += fmt.Sprintf("- %s = %d\n", n, v)
-	}
-
-	return result
+func (m *MemStorage) GetGaugeValue(key string) (float64, int) {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    value, ok := m.gauges[key]
+    if !ok {
+        return 0, http.StatusNotFound
+    }
+    return value, http.StatusOK
 }
 
-func (s *MemStorage) GetCounterValue(id string) int64 {
-	return int64(s.CounterData[id])
+func (m *MemStorage) AllMetrics() string {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+
+    allMetrics := make([]models.Metrics, 0, len(m.counters)+len(m.gauges))
+
+    for key, value := range m.counters {
+        delta := value
+        allMetrics = append(allMetrics, models.Metrics{
+            ID:    key,
+            MType: "counter",
+            Delta: &delta,
+        })
+    }
+
+    for key, value := range m.gauges {
+        val := value
+        allMetrics = append(allMetrics, models.Metrics{
+            ID:    key,
+            MType: "gauge",
+            Value: &val,
+        })
+    }
+
+    jsonMetrics, _ := json.Marshal(allMetrics)
+    return string(jsonMetrics)
 }
 
-func (s *MemStorage) GetGaugeValue(id string) float64 {
-	return float64(s.GaugeData[id])
-}
-
-func (s *MemStorage) GetCounterData() map[string]counter {
-	return s.CounterData
-}
-
-func (s *MemStorage) GetGaugeData() map[string]gauge {
-	return s.GaugeData
-}
-
-func (s *MemStorage) UpdateGaugeData(gaugeData map[string]gauge) {
-	s.GaugeData = gaugeData
-}
-
-func (s *MemStorage) UpdateCounterData(counterData map[string]counter) {
-	s.CounterData = counterData
-}
-
-func (s *MemStorage) StoreBatch(metrics []models.Metrics) {
-	for _, m := range metrics {
-		switch m.MType {
-		case "counter":
-			s.UpdateCounter(m.ID, *m.Delta)
-		case "gauge":
-			s.UpdateGauge(m.ID, *m.Value)
-		}
-
-	}
-}
