@@ -4,34 +4,45 @@ import (
     "encoding/json"
     "sync"
     "github.com/root-gabriel/ya/internal/models"
+    "net/http"
 )
 
-type MemStorage struct {
+type Storage interface {
+    UpdateCounter(string, int64)
+    UpdateGauge(string, float64)
+    GetCounterValue(string) (int64, int)
+    GetGaugeValue(string) (float64, int)
+    AllMetrics() string
+    GetCounterData() map[string]int64
+    GetGaugeData() map[string]float64
+}
+
+type MemoryStorage struct {
     mu       sync.RWMutex
     counters map[string]int64
     gauges   map[string]float64
 }
 
-func NewMemStorage() *MemStorage {
-    return &MemStorage{
+func NewMemoryStorage() *MemoryStorage {
+    return &MemoryStorage{
         counters: make(map[string]int64),
         gauges:   make(map[string]float64),
     }
 }
 
-func (m *MemStorage) UpdateCounter(key string, value int64) {
+func (m *MemoryStorage) UpdateCounter(key string, value int64) {
     m.mu.Lock()
     defer m.mu.Unlock()
     m.counters[key] += value
 }
 
-func (m *MemStorage) UpdateGauge(key string, value float64) {
+func (m *MemoryStorage) UpdateGauge(key string, value float64) {
     m.mu.Lock()
     defer m.mu.Unlock()
     m.gauges[key] = value
 }
 
-func (m *MemStorage) GetCounterValue(key string) (int64, int) {
+func (m *MemoryStorage) GetCounterValue(key string) (int64, int) {
     m.mu.RLock()
     defer m.mu.RUnlock()
     value, ok := m.counters[key]
@@ -41,7 +52,7 @@ func (m *MemStorage) GetCounterValue(key string) (int64, int) {
     return value, http.StatusOK
 }
 
-func (m *MemStorage) GetGaugeValue(key string) (float64, int) {
+func (m *MemoryStorage) GetGaugeValue(key string) (float64, int) {
     m.mu.RLock()
     defer m.mu.RUnlock()
     value, ok := m.gauges[key]
@@ -51,7 +62,7 @@ func (m *MemStorage) GetGaugeValue(key string) (float64, int) {
     return value, http.StatusOK
 }
 
-func (m *MemStorage) AllMetrics() string {
+func (m *MemoryStorage) AllMetrics() string {
     m.mu.RLock()
     defer m.mu.RUnlock()
 
@@ -77,5 +88,25 @@ func (m *MemStorage) AllMetrics() string {
 
     jsonMetrics, _ := json.Marshal(allMetrics)
     return string(jsonMetrics)
+}
+
+func (m *MemoryStorage) GetCounterData() map[string]int64 {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    data := make(map[string]int64, len(m.counters))
+    for k, v := range m.counters {
+        data[k] = v
+    }
+    return data
+}
+
+func (m *MemoryStorage) GetGaugeData() map[string]float64 {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    data := make(map[string]float64, len(m.gauges))
+    for k, v := range m.gauges {
+        data[k] = v
+    }
+    return data
 }
 

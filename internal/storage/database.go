@@ -25,12 +25,12 @@ type gaugeMetric struct {
 }
 
 type dbProvider struct {
-	st            *MemStorage
+	st            *MemoryStorage
 	DB            *sqlx.DB
 	storeInterval int
 }
 
-func NewDBProvider(dsn string, storeInterval int, m *MemStorage) (StorageWorker, error) {
+func NewDBProvider(dsn string, storeInterval int, m *MemoryStorage) (StorageWorker, error) {
 	var err error
 	dbc := &dbProvider{
 		st:            m,
