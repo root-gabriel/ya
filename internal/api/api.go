@@ -2,10 +2,10 @@ package api
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/lionslon/go-yapmetrics/internal/config"
-	"github.com/lionslon/go-yapmetrics/internal/handlers"
-	"github.com/lionslon/go-yapmetrics/internal/middlewares"
-	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"github.com/root-gabriel/ya/internal/config"
+	"github.com/root-gabriel/ya/internal/handlers"
+	"github.com/root-gabriel/ya/internal/middlewares"
+	"github.com/root-gabriel/ya/internal/storage"
 	"go.uber.org/zap"
 	"log"
 )
