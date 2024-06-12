@@ -33,125 +33,66 @@ func New(stor *storage.MemStorage) *handler {
 	}
 }
 
+// UpdateMetrics handles POST requests to update metric values
 func (h *handler) UpdateMetrics() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		metricsType := ctx.Param("typeM")
-		metricsName := ctx.Param("nameM")
-		metricsValue := ctx.Param("valueM")
-
-		switch metricsType {
-		case "counter":
-			value, err := strconv.ParseInt(metricsValue, 10, 64)
+		var m models.Metrics
+		if err := json.NewDecoder(ctx.Request().Body).Decode(&m); err != nil {
+			return ctx.JSON(http.StatusBadRequest, "Invalid request payload")
+		}
+		
+		if m.MType == "counter" {
+			value, err := strconv.ParseInt(*m.Delta, 10, 64)
 			if err != nil {
-				return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to an integer", metricsValue))
+				return ctx.JSON(http.StatusBadRequest, "Invalid counter value")
 			}
-			h.store.UpdateCounter(metricsName, value)
-		case "gauge":
-			value, err := strconv.ParseFloat(metricsValue, 64)
+			h.store.UpdateCounter(m.ID, value)
+		} else if m.MType == "gauge" {
+			value, err := strconv.ParseFloat(*m.Value, 64)
 			if err != nil {
-				return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to a float", metricsValue))
+				return ctx.JSON(http.StatusBadRequest, "Invalid gauge value")
 			}
-			h.store.UpdateGauge(metricsName, value)
-		default:
-			return ctx.String(http.StatusBadRequest, "Invalid metric type. Can only be 'gauge' or 'counter'")
+			h.store.UpdateGauge(m.ID, value)
+		} else {
+			return ctx.JSON(http.StatusBadRequest, "Invalid metric type")
 		}
 
-		return ctx.String(http.StatusOK, "")
+		return ctx.JSON(http.StatusOK, m)
 	}
 }
 
+// MetricsValue handles POST requests to get metric values
 func (h *handler) MetricsValue() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		typeM := ctx.Param("typeM")
-		nameM := ctx.Param("nameM")
-
-		val, status := h.store.GetValue(typeM, nameM)
-		ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		return ctx.String(status, val)
-	}
-}
-
-func (h *handler) AllMetricsValues() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		ctx.Response().Header().Set("Content-Type", "text/html")
-		return ctx.String(http.StatusOK, h.store.AllMetrics())
-	}
-}
-
-func (h *handler) UpdateJSON() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		var metric models.Metrics
-
-		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
-		if err != nil {
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
+		var m models.Metrics
+		if err := json.NewDecoder(ctx.Request().Body).Decode(&m); err != nil {
+			return ctx.JSON(http.StatusBadRequest, "Invalid request payload")
 		}
 
-		switch metric.MType {
-		case "counter":
-			h.store.UpdateCounter(metric.ID, *metric.Delta)
-		case "gauge":
-			h.store.UpdateGauge(metric.ID, *metric.Value)
-		default:
-			return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
-		}
-
-		return ctx.JSON(http.StatusOK, metric)
-	}
-}
-
-func (h *handler) GetValueJSON() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		var metric models.Metrics
-
-		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
-		if err != nil {
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
-		}
-
-		switch metric.MType {
-		case "counter":
-			value := h.store.GetCounterValue(metric.ID)
-			metric.Delta = &value
-		case "gauge":
-			value := h.store.GetGaugeValue(metric.ID)
-			metric.Value = &value
-		default:
-			return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
-		}
-
-		return ctx.JSON(http.StatusOK, metric)
-	}
-}
-
-func (h *handler) PingDB(sw storage.StorageWorker) echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		err := sw.Check()
-		ctx.Response().Header().Set("Content-Type", "text/html")
-		if err == nil {
-			err = ctx.String(http.StatusOK, "Connection database is OK")
+		var value string
+		var status int
+		if m.MType == "counter" {
+			value, status = h.store.GetValue("counter", m.ID)
+		} else if m.MType == "gauge" {
+			value, status = h.store.GetValue("gauge", m.ID)
 		} else {
-			zap.S().Error("Connection database is NOT OK")
-			err = ctx.String(http.StatusInternalServerError, "Connection database is NOT OK")
+			return ctx.JSON(http.StatusBadRequest, "Invalid metric type")
 		}
 
-		if err != nil {
-			return err
+		if status != http.StatusOK {
+			return ctx.JSON(status, "Metric not found")
 		}
 
-		return nil
+		return ctx.JSON(http.StatusOK, value)
 	}
 }
 
-func (h *handler) UpdatesJSON() echo.HandlerFunc {
+// AllMetrics handles GET requests to retrieve all metrics
+func (h *handler) AllMetrics() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		metrics := make([]models.Metrics, 0)
-		err := json.NewDecoder(ctx.Request().Body).Decode(&metrics)
-		if err != nil && !errors.Is(err, io.EOF) {
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
-		}
-		h.store.StoreBatch(metrics)
-		return ctx.NoContent(http.StatusOK)
+		allMetrics := h.store.AllMetrics()
+		ctx.Response().Header().Set("Content-Type", "application/json")
+		return ctx.String(http.StatusOK, allMetrics)
 	}
 }
 
