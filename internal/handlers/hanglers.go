@@ -113,6 +113,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 
 func (h *handler) GetValueJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		ctx.Response().Header().Set("Content-Type", "application/json")
 		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
@@ -131,7 +132,6 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 			return ctx.String(http.StatusNotFound, "Invalid metric type. Can only be 'gauge' or 'counter'")
 		}
 
-		ctx.Response().Header().Set("Content-Type", "application/json")
 		return ctx.JSON(http.StatusOK, metric)
 	}
 }
@@ -163,6 +163,7 @@ func (h *handler) UpdatesJSON() echo.HandlerFunc {
 			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
 		}
 		h.store.StoreBatch(metrics)
+		ctx.Response().Header().Set("Content-Type", "application/json")
 
 		return ctx.NoContent(http.StatusOK)
 	}

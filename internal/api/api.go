@@ -52,6 +52,9 @@ func New() *APIServer {
 
 	apiS.echo.Use(middlewares.WithLogging())
 	apiS.echo.Use(middlewares.GzipUnpacking())
+	if cfg.SignPass != "" {
+		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
+	}
 
 	apiS.echo.GET("/", handler.AllMetricsValues())
 	apiS.echo.POST("/value/", handler.GetValueJSON())
