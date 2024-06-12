@@ -77,3 +77,4 @@ func (s *ServerConfig) GetProvider() storage.StorageProvider {
 	}
 	return 0
 }
+

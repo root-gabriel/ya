@@ -2,26 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/lionslon/go-yapmetrics/internal/models"
-	"github.com/lionslon/go-yapmetrics/internal/storage"
-	"go.uber.org/zap"
-	"io"
 	"net/http"
-	"strconv"
 )
-
-type storageUpdater interface {
-	UpdateCounter(string, int64)
-	UpdateGauge(string, float64)
-	GetValue(string, string) (string, int)
-	AllMetrics() string
-	GetCounterValue(string) int64
-	GetGaugeValue(string) float64
-	StoreBatch([]models.Metrics)
-}
 
 type handler struct {
 	store storageUpdater
@@ -40,19 +24,17 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 		if err := json.NewDecoder(ctx.Request().Body).Decode(&m); err != nil {
 			return ctx.JSON(http.StatusBadRequest, "Invalid request payload")
 		}
-		
+
 		if m.MType == "counter" {
-			value, err := strconv.ParseInt(*m.Delta, 10, 64)
-			if err != nil {
+			if m.Delta == nil {
 				return ctx.JSON(http.StatusBadRequest, "Invalid counter value")
 			}
-			h.store.UpdateCounter(m.ID, value)
+			h.store.UpdateCounter(m.ID, *m.Delta)
 		} else if m.MType == "gauge" {
-			value, err := strconv.ParseFloat(*m.Value, 64)
-			if err != nil {
+			if m.Value == nil {
 				return ctx.JSON(http.StatusBadRequest, "Invalid gauge value")
 			}
-			h.store.UpdateGauge(m.ID, value)
+			h.store.UpdateGauge(m.ID, *m.Value)
 		} else {
 			return ctx.JSON(http.StatusBadRequest, "Invalid metric type")
 		}
@@ -69,12 +51,12 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 			return ctx.JSON(http.StatusBadRequest, "Invalid request payload")
 		}
 
-		var value string
+		var value interface{}
 		var status int
 		if m.MType == "counter" {
-			value, status = h.store.GetValue("counter", m.ID)
+			value, status = h.store.GetCounterValue(m.ID)
 		} else if m.MType == "gauge" {
-			value, status = h.store.GetValue("gauge", m.ID)
+			value, status = h.store.GetGaugeValue(m.ID)
 		} else {
 			return ctx.JSON(http.StatusBadRequest, "Invalid metric type")
 		}
@@ -83,7 +65,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 			return ctx.JSON(status, "Metric not found")
 		}
 
-		return ctx.JSON(http.StatusOK, value)
+		return ctx.JSON(http.StatusOK, map[string]interface{}{"value": value})
 	}
 }
 
