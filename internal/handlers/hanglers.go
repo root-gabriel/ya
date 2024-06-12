@@ -39,6 +39,8 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
         metricsName := ctx.Param("nameM")
         metricsValue := ctx.Param("valueM")
 
+        ctx.Response().Header().Set("Content-Type", "application/json")
+
         switch metricsType {
         case "counter":
             value, err := strconv.ParseInt(metricsValue, 10, 64)
@@ -56,7 +58,6 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
             return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
         }
 
-        ctx.Response().Header().Set("Content-Type", "application/json")
         return ctx.JSON(http.StatusOK, map[string]string{"status": "success"})
     }
 }
@@ -66,31 +67,25 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
         typeM := ctx.Param("typeM")
         nameM := ctx.Param("nameM")
 
-        val, status := h.store.GetValue(typeM, nameM)
-        err := ctx.String(status, val)
-        if err != nil {
-            return err
-        }
+        ctx.Response().Header().Set("Content-Type", "application/json")
 
-        return nil
+        val, status := h.store.GetValue(typeM, nameM)
+        return ctx.String(status, val)
     }
 }
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
     return func(ctx echo.Context) error {
-        ctx.Response().Header().Set("Content-Type", "text/html")
-        err := ctx.String(http.StatusOK, h.store.AllMetrics())
-        if err != nil {
-            return err
-        }
-
-        return nil
+        ctx.Response().Header().Set("Content-Type", "application/json")
+        return ctx.String(http.StatusOK, h.store.AllMetrics())
     }
 }
 
 func (h *handler) UpdateJSON() echo.HandlerFunc {
     return func(ctx echo.Context) error {
         var metric models.Metrics
+
+        ctx.Response().Header().Set("Content-Type", "application/json")
 
         err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
         if err != nil {
@@ -106,7 +101,6 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
             return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
         }
 
-        ctx.Response().Header().Set("Content-Type", "application/json")
         return ctx.JSON(http.StatusOK, metric)
     }
 }
@@ -115,6 +109,7 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
     return func(ctx echo.Context) error {
         ctx.Response().Header().Set("Content-Type", "application/json")
         var metric models.Metrics
+
         err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
         if err != nil {
             return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
@@ -127,7 +122,6 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
         case "gauge":
             value := h.store.GetGaugeValue(metric.ID)
             metric.Value = &value
-
         default:
             return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
         }
@@ -141,7 +135,7 @@ func (h *handler) PingDB(sw storage.StorageWorker) echo.HandlerFunc {
         err := sw.Check()
         ctx.Response().Header().Set("Content-Type", "application/json")
         if err == nil {
-            return ctx.JSON(http.StatusOK, map[string]string{"message": "Connection database is OK"})
+            return ctx.JSON(http.StatusOK, map[string]string{"status": "Connection database is OK"})
         } else {
             zap.S().Error("Connection database is NOT OK")
             return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Connection database is NOT OK"})
@@ -151,13 +145,16 @@ func (h *handler) PingDB(sw storage.StorageWorker) echo.HandlerFunc {
 
 func (h *handler) UpdatesJSON() echo.HandlerFunc {
     return func(ctx echo.Context) error {
-        metrics := make([]models.Metrics, 0)
+        var metrics []models.Metrics
+
+        ctx.Response().Header().Set("Content-Type", "application/json")
+
         err := json.NewDecoder(ctx.Request().Body).Decode(&metrics)
         if err != nil && !errors.Is(err, io.EOF) {
             return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
         }
+
         h.store.StoreBatch(metrics)
-        ctx.Response().Header().Set("Content-Type", "application/json")
 
         return ctx.NoContent(http.StatusOK)
     }
