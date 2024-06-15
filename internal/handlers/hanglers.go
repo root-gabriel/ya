@@ -73,7 +73,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
         if status != http.StatusOK {
             return ctx.JSON(status, map[string]string{"error": "Metric not found"})
         }
-        return ctx.JSON(status, map[string]string{"value": val})
+        return nil //ctx.JSON(status, map[string]string{"value": val})
 
 		//err := ctx.String(status, val)
 		//if err != nil {
