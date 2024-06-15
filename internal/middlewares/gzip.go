@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 )
+
 type compressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -73,7 +74,6 @@ func GzipUnpacking() echo.MiddlewareFunc {
 			req := ctx.Request()
 			rw := ctx.Response().Writer
 			header := req.Header
-
 			zap.S().Infof("Request Headers before gzip processing: %v", header)
 
 			if strings.Contains(header.Get("Accept-Encoding"), "gzip") {
@@ -90,7 +90,6 @@ func GzipUnpacking() echo.MiddlewareFunc {
 				ctx.Request().Body = cr
 				defer cr.Close()
 			}
-
 			if err = next(ctx); err != nil {
 				ctx.Error(err)
 			}
