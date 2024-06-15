@@ -115,8 +115,11 @@ func (h *handler) AllMetricsValues() echo.HandlerFunc {
 				if len(parts) != 2 {
 					continue
 				}
-				metricName := parts[0]
-				metricValue := parts[1]
+				metricName := strings.TrimSpace(parts[0])
+				metricValue := strings.TrimSpace(parts[1])
+				if strings.HasPrefix(metricName, "- ") {
+					metricName = metricName[2:]
+				}
 				if strings.HasPrefix(metricName, "gauge") {
 					value, err := strconv.ParseFloat(metricValue, 64)
 					if err != nil {
