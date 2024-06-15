@@ -73,17 +73,18 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 		nameM := ctx.Param("nameM")
 
         val, status := h.store.GetValue(typeM, nameM)
-        if status == http.StatusOK {
-            return ctx.String(status, val)
-        }
-        return ctx.JSON(status, map[string]string{"error": "Metric not found"})
-		
         //err := ctx.String(status, val)
 		//if err != nil {
 		//	return err
 		//}
 
 		//return nil
+        if status != http.StatusOK {
+            ctx.Response().Header().Set("Content-Type", "application/json")
+            return ctx.JSON(status, map[string]string{"error": "Metric not found"})
+        }
+        ctx.Response().Header().Set("Content-Type", "application/json")
+        return ctx.JSON(status, map[string]string{"value": val})
 	}
 }
 
