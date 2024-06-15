@@ -2,7 +2,7 @@ package storage
 
 import (
 	"fmt"
-	"github.com/lionslon/go-yapmetrics/internal/models"
+	"github.com/root-gabriel/ya/internal/models"
 	"net/http"
 )
 
@@ -13,11 +13,6 @@ type MemStorage struct {
 	GaugeData   map[string]gauge   `json:"gauge"`
 	CounterData map[string]counter `json:"counter"`
 }
-
-//type AllMetrics struct {
-//	Gauge   map[string]gauge   `json:"gauge"`
-//	Counter map[string]counter `json:"counter"`
-//}
 
 func NewMem() *MemStorage {
 	storage := MemStorage{
@@ -99,3 +94,20 @@ func (s *MemStorage) StoreBatch(metrics []models.Metrics) {
 
 	}
 }
+
+func (s *MemStorage) Check() error {
+	return nil
+}
+
+func (s *MemStorage) Dump() error {
+	return nil
+}
+
+func (s *MemStorage) IntervalDump() {
+	// no-op for memory storage
+}
+
+func (s *MemStorage) Restore() error {
+	return nil
+}
+

@@ -2,28 +2,29 @@ package api
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/lionslon/go-yapmetrics/internal/config"
-	"github.com/lionslon/go-yapmetrics/internal/handlers"
-	"github.com/lionslon/go-yapmetrics/internal/middlewares"
-	"github.com/lionslon/go-yapmetrics/internal/storage"
+	"github.com/root-gabriel/ya/internal/config"
+	"github.com/root-gabriel/ya/internal/handlers"
+	"github.com/root-gabriel/ya/internal/middlewares"
+	"github.com/root-gabriel/ya/internal/storage"
 	"go.uber.org/zap"
 	"log"
 )
 
 type APIServer struct {
-	cfg  *config.ServerConfig
-	echo *echo.Echo
-	st   *storage.MemStorage
+	Cfg             *config.ServerConfig
+	Echo            *echo.Echo
+	Storage         *storage.MemStorage
+	StorageProvider storage.StorageWorker
 }
 
 func New() *APIServer {
 	apiS := &APIServer{}
 	cfg := config.NewServer()
-	apiS.cfg = cfg
-	apiS.echo = echo.New()
-	apiS.st = storage.NewMem()
+	apiS.Cfg = cfg
+	apiS.Echo = echo.New()
+	apiS.Storage = storage.NewMem()
 
-	handler := handlers.New(apiS.st)
+	handler := handlers.New(apiS.Storage)
 	logger, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(logger)
 	defer logger.Sync()
@@ -32,9 +33,9 @@ func New() *APIServer {
 	var err error
 	switch cfg.GetProvider() {
 	case storage.FileProvider:
-		storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
+		storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.Storage)
 	case storage.DBProvider:
-		storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
+		storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.Storage)
 	}
 	if err != nil {
 		zap.S().Error(err)
@@ -50,28 +51,31 @@ func New() *APIServer {
 		go storageProvider.IntervalDump()
 	}
 
-	apiS.echo.Use(middlewares.WithLogging())
-	apiS.echo.Use(middlewares.GzipUnpacking())
+	apiS.Echo.Use(middlewares.WithLogging())
+	apiS.Echo.Use(middlewares.GzipUnpacking())
 	if cfg.SignPass != "" {
-		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
+		apiS.Echo.Use(middlewares.CheckSignReq(cfg.SignPass))
 	}
 
-	apiS.echo.GET("/", handler.AllMetricsValues())
-	apiS.echo.POST("/value/", handler.GetValueJSON())
-	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
-	apiS.echo.POST("/update/", handler.UpdateJSON())
-	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
-	apiS.echo.POST("/updates/", handler.UpdatesJSON())
-	apiS.echo.GET("/ping", handler.PingDB(storageProvider))
+	apiS.Echo.GET("/", handler.AllMetricsValues())
+	apiS.Echo.POST("/value/", handler.GetValueJSON())
+	apiS.Echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
+	apiS.Echo.POST("/update/", handler.UpdateJSON())
+	apiS.Echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
+	apiS.Echo.POST("/updates/", handler.UpdatesJSON())
+	apiS.Echo.GET("/ping", handler.PingDB(storageProvider))
+
+	apiS.StorageProvider = storageProvider
 
 	return apiS
 }
 
 func (a *APIServer) Start() error {
-	err := a.echo.Start(a.cfg.Addr)
+	err := a.Echo.Start(a.Cfg.Addr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	return nil
 }
+

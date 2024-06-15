@@ -1,4 +1,4 @@
-module github.com/lionslon/go-yapmetrics
+module github.com/root-gabriel/ya
 
 go 1.21
 
