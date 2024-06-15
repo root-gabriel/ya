@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+    "strings"
 )
 
 type storageUpdater interface {
@@ -99,8 +100,43 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		metrics := h.store.AllMetrics()
+
+		acceptHeader := ctx.Request().Header.Get("Accept")
+		if acceptHeader == "application/json" {
+			metricsMap := make(map[string]interface{})
+			// Пример парсинга метрик из строки в map
+			// Ожидается, что строка метрик будет в формате "metric_name:value;metric_name:value;..."
+			metricsList := strings.Split(metrics, ";")
+			for _, metric := range metricsList {
+				parts := strings.Split(metric, ":")
+				if len(parts) != 2 {
+					continue
+				}
+				metricName := parts[0]
+				metricValue := parts[1]
+				if strings.HasPrefix(metricName, "counter") {
+					value, err := strconv.ParseInt(metricValue, 10, 64)
+					if err != nil {
+						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse counter value"})
+					}
+					metricsMap[metricName] = value
+				} else if strings.HasPrefix(metricName, "gauge") {
+					value, err := strconv.ParseFloat(metricValue, 64)
+					if err != nil {
+						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse gauge value"})
+					}
+					metricsMap[metricName] = value
+				} else {
+					metricsMap[metricName] = metricValue
+				}
+			}
+
+			return ctx.JSON(http.StatusOK, metricsMap)
+		}
+
 		ctx.Response().Header().Set("Content-Type", "text/html")
-		return ctx.String(http.StatusOK, h.store.AllMetrics())
+		return ctx.String(http.StatusOK, metrics)
 	}
 }
 
