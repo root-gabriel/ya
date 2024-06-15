@@ -83,9 +83,16 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
             ctx.Response().Header().Set("Content-Type", "application/json")
             return ctx.JSON(status, map[string]string{"error": "Metric not found"})
         }
-        ctx.Response().Header().Set("Content-Type", "application/json")
-        return ctx.JSON(status, map[string]string{"value": val})
-	}
+
+        // Сохраняем исходный формат для успешных запросов
+        if ctx.Request().Header.Get("Accept") == "application/json" {
+            ctx.Response().Header().Set("Content-Type", "application/json")
+            return ctx.JSON(status, map[string]string{"value": val})
+        }
+
+        ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
+        return ctx.String(status, val)
+    }
 }
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
