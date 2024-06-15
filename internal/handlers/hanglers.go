@@ -118,7 +118,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 			h.store.UpdateGauge(metric.ID, *metric.Value)
 		default:
 			//return ctx.String(http.StatusNotFound, "Invalid metric type. Can only be 'gauge' or 'counter'")
-            return ctx.JSON(http.StatusNotFound, map.[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
+            return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
 		}
 
 		ctx.Response().Header().Set("Content-Type", "application/json")
