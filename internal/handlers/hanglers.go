@@ -77,7 +77,20 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 		acceptHeader := ctx.Request().Header.Get("Accept")
 		if acceptHeader == "application/json" {
-			return ctx.JSON(status, map[string]string{"value": val})
+			if typeM == "counter" {
+				delta, err := strconv.ParseInt(val, 10, 64)
+				if err != nil {
+					return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse counter value"})
+				}
+				return ctx.JSON(status, map[string]interface{}{"id": nameM, "type": typeM, "delta": delta})
+			}
+			if typeM == "gauge" {
+				value, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse gauge value"})
+				}
+				return ctx.JSON(status, map[string]interface{}{"id": nameM, "type": typeM, "value": value})
+			}
 		}
 
 		return ctx.String(status, val)
