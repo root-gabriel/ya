@@ -105,26 +105,28 @@ func (h *handler) AllMetricsValues() echo.HandlerFunc {
 		acceptHeader := ctx.Request().Header.Get("Accept")
 		if acceptHeader == "application/json" {
 			metricsMap := make(map[string]interface{})
-			// Пример парсинга метрик из строки в map
-			// Ожидается, что строка метрик будет в формате "metric_name:value;metric_name:value;..."
-			metricsList := strings.Split(metrics, ";")
+			
+			metricsList := strings.Split(metrics, "\n")
 			for _, metric := range metricsList {
-				parts := strings.Split(metric, ":")
+				if metric == "" {
+					continue
+				}
+				parts := strings.Split(metric, " = ")
 				if len(parts) != 2 {
 					continue
 				}
 				metricName := parts[0]
 				metricValue := parts[1]
-				if strings.HasPrefix(metricName, "counter") {
-					value, err := strconv.ParseInt(metricValue, 10, 64)
-					if err != nil {
-						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse counter value"})
-					}
-					metricsMap[metricName] = value
-				} else if strings.HasPrefix(metricName, "gauge") {
+				if strings.HasPrefix(metricName, "gauge") {
 					value, err := strconv.ParseFloat(metricValue, 64)
 					if err != nil {
 						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse gauge value"})
+					}
+					metricsMap[metricName] = value
+				} else if strings.HasPrefix(metricName, "counter") {
+					value, err := strconv.ParseInt(metricValue, 10, 64)
+					if err != nil {
+						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse counter value"})
 					}
 					metricsMap[metricName] = value
 				} else {
