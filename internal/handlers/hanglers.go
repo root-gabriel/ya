@@ -56,8 +56,11 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 			return ctx.String(http.StatusBadRequest, "Invalid metric type. Can only be 'gauge' or 'counter'")
 		}
 
-		ctx.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
-		return ctx.String(http.StatusOK, "")
+        ctx.Response().Header().Set("Content-Type", "application/json")
+        return ctx.JSON(http.StatusOK, map[string]string{"status": "success"})
+
+		//ctx.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
+		//return ctx.String(http.StatusOK, "")
 	}
 }
 
