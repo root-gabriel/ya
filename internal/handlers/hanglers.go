@@ -97,7 +97,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
     return func(ctx echo.Context) error {
         acceptHeader := ctx.Request().Header.Get("Accept")
-        if acceptHeader == "application/json" {
+        if strings.Contains(acceptHeader, "application/json") {
             metrics := make(map[string]string)
             for _, line := range strings.Split(h.store.AllMetrics(), "\n") {
                 if line == "" {
@@ -105,10 +105,7 @@ func (h *handler) AllMetricsValues() echo.HandlerFunc {
                 }
                 parts := strings.Split(line, " = ")
                 if len(parts) == 2 {
-                    key := strings.TrimSpace(parts[0])
-                    // Удаление дефиса из ключа
-                    key = strings.TrimPrefix(key, "- ")
-                    metrics[key] = strings.TrimSpace(parts[1])
+                    metrics[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
                 }
             }
             return ctx.JSON(http.StatusOK, metrics)
@@ -125,7 +122,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 
         err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
         if err != nil {
-            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
+            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Ошибка при декодировании JSON: %s", err)})
         }
 
         switch metric.MType {
@@ -134,7 +131,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
         case "gauge":
             h.store.UpdateGauge(metric.ID, *metric.Value)
         default:
-            return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
+            return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Недопустимый тип метрики. Может быть только 'gauge' или 'counter'"})
         }
 
         ctx.Response().Header().Set("Content-Type", "application/json")
@@ -143,27 +140,27 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 }
 
 func (h *handler) GetValueJSON() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		ctx.Response().Header().Set("Content-Type", "application/json")
-		var metric models.Metrics
-		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
-		if err != nil {
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
-		}
+    return func(ctx echo.Context) error {
+        ctx.Response().Header().Set("Content-Type", "application/json")
+        var metric models.Metrics
+        err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
+        if err != nil {
+            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Ошибка при декодировании JSON: %s", err)})
+        }
 
-		switch metric.MType {
-		case "counter":
-			value := h.store.GetCounterValue(metric.ID)
-			metric.Delta = &value
-		case "gauge":
-			value := h.store.GetGaugeValue(metric.ID)
-			metric.Value = &value
-		default:
-			return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
-		}
+        switch metric.MType {
+        case "counter":
+            value := h.store.GetCounterValue(metric.ID)
+            metric.Delta = &value
+        case "gauge":
+            value := h.store.GetGaugeValue(metric.ID)
+            metric.Value = &value
+        default:
+            return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Недопустимый тип метрики. Может быть только 'gauge' или 'counter'"})
+        }
 
-		return ctx.JSON(http.StatusOK, metric)
-	}
+        return ctx.JSON(http.StatusOK, metric)
+    }
 }
 
 func (h *handler) PingDB(sw storage.StorageWorker) echo.HandlerFunc {
