@@ -127,7 +127,8 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
-			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
+			//return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
+            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
 		}
 
 		switch metric.MType {
@@ -139,7 +140,8 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 			metric.Value = &value
 
 		default:
-			return ctx.String(http.StatusNotFound, "Invalid metric type. Can only be 'gauge' or 'counter'")
+			//return ctx.String(http.StatusNotFound, "Invalid metric type. Can only be 'gauge' or 'counter'")
+            return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
 		}
 
 		return ctx.JSON(http.StatusOK, metric)
