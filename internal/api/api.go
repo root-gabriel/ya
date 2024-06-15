@@ -11,12 +11,13 @@ import (
 )
 
 type APIServer struct {
-	cfg  *config.ServerConfig
+	Cfg  *config.ServerConfig
 	echo *echo.Echo
 	st   *storage.MemStorage
+    storageProvider storage.StorageWorker //NEW
 }
 
-func New() *APIServer {
+/*func New() *APIServer {
 	apiS := &APIServer{}
 	cfg := config.NewServer()
 	apiS.cfg = cfg
@@ -50,6 +51,7 @@ func New() *APIServer {
 		go storageProvider.IntervalDump()
 	}
 
+    apiS.echo.Use(middleware.Gzip()) //NEW
 	apiS.echo.Use(middlewares.WithLogging())
 	apiS.echo.Use(middlewares.GzipUnpacking())
 	if cfg.SignPass != "" {
@@ -65,6 +67,56 @@ func New() *APIServer {
 	apiS.echo.GET("/ping", handler.PingDB(storageProvider))
 
 	return apiS
+}*/
+
+
+func New() *APIServer {
+	apiS := &APIServer{}
+	cfg := config.NewServer()
+	apiS.Cfg = cfg
+	apiS.echo = echo.New()
+	apiS.st = storage.NewMem()
+
+	var err error
+	switch cfg.GetProvider() {
+	case storage.FileProvider:
+		apiS.storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
+	case storage.DBProvider:
+		apiS.storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
+	}
+	if err != nil {
+		zap.S().Error(err)
+	}
+	if cfg.Restore {
+		err := apiS.storageProvider.Restore()
+		if err != nil {
+			zap.S().Error(err)
+		}
+	}
+
+	if cfg.StoreIntervalNotZero() {
+		go apiS.storageProvider.IntervalDump()
+	}
+
+	apiS.echo.Use(middlewares.WithLogging())
+	apiS.echo.Use(middlewares.GzipUnpacking())
+	if cfg.SignPass != "" {
+		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
+	}
+
+	return apiS
+}
+
+//NEW
+func (a *APIServer) RegisterRoutes(e *echo.Echo) {
+	handler := handlers.New(a.st)
+	e.GET("/", handler.AllMetricsValues())
+	e.POST("/value/", handler.GetValueJSON())
+	e.GET("/value/:typeM/:nameM", handler.MetricsValue())
+	e.POST("/update/", handler.UpdateJSON())
+	e.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
+	e.POST("/updates/", handler.UpdatesJSON())
+	e.GET("/ping", handler.PingDB(a.storageProvider))
 }
 
 func (a *APIServer) Start() error {
