@@ -77,10 +77,10 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 		acceptHeader := ctx.Request().Header.Get("Accept")
 		if strings.Contains(acceptHeader, "application/json") {
 			return ctx.JSON(status, map[string]string{"value": val})
-		}
-
-		ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		return ctx.String(status, val)
+		} else {
+            ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
+		    return ctx.String(status, val)
+        }
 	}
 }
 
