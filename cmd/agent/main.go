@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/root-gabriel/ya/internal/config"
-	"github.com/root-gabriel/ya/internal/middlewares"
-	"github.com/root-gabriel/ya/internal/models"
+	"github.com/lionslon/go-yapmetrics/internal/config"
+	"github.com/lionslon/go-yapmetrics/internal/models"
 	"go.uber.org/zap"
 	"math/rand"
 	"runtime"
@@ -79,16 +78,16 @@ func postQueries(cfg *config.ClientConfig) {
 	client.RetryWaitMax = time.Second * 5
 
 	for k, v := range valuesGauge {
-		postJSON(client, url, models.Metrics{ID: k, MType: "gauge", Value: &v}, cfg.SignPass)
+		postJSON(client, url, models.Metrics{ID: k, MType: "gauge", Value: &v})
 	}
 	pc := int64(pollCount)
-	postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc}, cfg.SignPass)
+	postJSON(client, url, models.Metrics{ID: "PollCount", MType: "counter", Delta: &pc})
 	r := rand.Float64()
-	postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r}, cfg.SignPass)
+	postJSON(client, url, models.Metrics{ID: "RandomValue", MType: "gauge", Value: &r})
 	pollCount = 0
 }
 
-func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password string) {
+func postJSON(c *retryablehttp.Client, url string, m models.Metrics) {
 	js, err := json.Marshal(m)
 	if err != nil {
 		zap.S().Error(err)
@@ -102,11 +101,6 @@ func postJSON(c *retryablehttp.Client, url string, m models.Metrics, password st
 	req, err := retryablehttp.NewRequest("POST", url, gz)
 	if err != nil {
 		zap.S().Error(err)
-	}
-
-	singPassword := []byte(password)
-	if singPassword != nil {
-		req.Header.Add("HashSHA256", middlewares.GetSign(js, singPassword))
 	}
 
 	req.Header.Add("content-type", "application/json")

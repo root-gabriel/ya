@@ -12,14 +12,14 @@ import (
 type fileProvider struct {
 	filePath      string
 	storeInterval int
-	st            *MemoryStorage
+	st            *MemStorage
 }
 
 func (f *fileProvider) Check() error {
 	return errors.New("not provided for this storage type")
 }
 
-func NewFileProvider(filePath string, storeInterval int, m *MemoryStorage) StorageWorker {
+func NewFileProvider(filePath string, storeInterval int, m *MemStorage) StorageWorker {
 	return &fileProvider{
 		filePath:      filePath,
 		storeInterval: storeInterval,
