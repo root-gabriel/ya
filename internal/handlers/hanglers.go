@@ -86,13 +86,15 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		ctx.Response().Header().Set("Content-Type", "text/html")
+		/*ctx.Response().Header().Set("Content-Type", "text/html")
 		err := ctx.String(http.StatusOK, h.store.AllMetrics())
 		if err != nil {
 			return err
 		}
 
-		return nil
+		return nil*/
+        ctx.Response().Header().Set("Content-Type", "application/json")
+        return ctx.JSON(http.StatusOK, h.store.AllMetrics())
 	}
 }
 
