@@ -81,6 +81,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 			return ctx.JSON(status, map[string]string{"value": val})
 		}
 
+		ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
 		return ctx.String(status, val)
 	}
 }
