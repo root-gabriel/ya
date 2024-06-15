@@ -170,7 +170,8 @@ func (h *handler) UpdatesJSON() echo.HandlerFunc {
 		metrics := make([]models.Metrics, 0)
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metrics)
 		if err != nil && !errors.Is(err, io.EOF) {
-			return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
+			//return ctx.String(http.StatusBadRequest, fmt.Sprintf("Error in JSON decode: %s", err))
+            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("Error in JSON decode: %s", err)})
 		}
 		h.store.StoreBatch(metrics)
 		ctx.Response().Header().Set("Content-Type", "application/json")
