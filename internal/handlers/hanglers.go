@@ -67,45 +67,25 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 	}
 }
 
-/*func (h *handler) MetricsValue() echo.HandlerFunc {
+func (h *handler) MetricsValue() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		typeM := ctx.Param("typeM")
 		nameM := ctx.Param("nameM")
 
-        val, status := h.store.GetValue(typeM, nameM)
-        //err := ctx.String(status, val)
-		//if err != nil {
-		//	return err
-		//}
-
-		//return nil
-        if status != http.StatusOK {
+		val, status := h.store.GetValue(typeM, nameM)
+		if status != http.StatusOK {
             ctx.Response().Header().Set("Content-Type", "application/json")
-            return ctx.JSON(status, map[string]string{"error": "Metric not found"})
-        }
+			return ctx.JSON(status, map[string]string{"error": "Metric not found"})
+		}
 
-        // Сохраняем исходный формат для успешных запросов
-        if ctx.Request().Header.Get("Accept") == "application/json" {
+		acceptHeader := ctx.Request().Header.Get("Accept")
+		if acceptHeader == "application/json" {
             ctx.Response().Header().Set("Content-Type", "application/json")
-            return ctx.JSON(status, map[string]string{"value": val})
-        }
+			return ctx.JSON(status, map[string]string{"value": val})
+		}
 
-        ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
-        return ctx.String(status, val)
-    }
-}*/
-func (h *handler) MetricsValue() echo.HandlerFunc {
-    return func(ctx echo.Context) error {
-        typeM := ctx.Param("typeM")
-        nameM := ctx.Param("nameM")
-
-        val, status := h.store.GetValue(typeM, nameM)
-        if status == http.StatusOK {
-            ctx.Response().Header().Set("Content-Type", "application/json")
-            return ctx.JSON(status, map[string]string{"value": val})
-        }
-        return ctx.JSON(status, map[string]string{"error": "Metric not found"})
-    }
+		return ctx.String(status, val)
+	}
 }
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
