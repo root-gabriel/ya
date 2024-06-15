@@ -1,0 +1,8 @@
+#!/bin/bash
+
+curl -X POST "http://localhost:8080/update/counter/testCounter/100" -H "Content-Type: application/json" -H "Accept: application/json"
+curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept: application/json"
+curl -X POST "http://localhost:8080/update/gauge/testGauge/100.5" -H "Content-Type: application/json" -H "Accept: application/json"
+curl -X GET "http://localhost:8080/value/gauge/testGauge" -H "Accept: application/json"
+curl -X POST "http://localhost:8080/update/" -H "Content-Type: application/json" -H "Accept: application/json" -
+
