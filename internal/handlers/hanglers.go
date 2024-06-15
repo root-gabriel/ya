@@ -156,7 +156,7 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 			//return ctx.String(http.StatusNotFound, "Invalid metric type. Can only be 'gauge' or 'counter'")
             return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
 		}
-
+        ctx.Response().Header().Set("Content-Type", "application/json") //NEW
 		return ctx.JSON(http.StatusOK, metric)
 	}
 }
@@ -191,6 +191,7 @@ func (h *handler) UpdatesJSON() echo.HandlerFunc {
 		h.store.StoreBatch(metrics)
 		ctx.Response().Header().Set("Content-Type", "application/json")
 
-		return ctx.NoContent(http.StatusOK)
+		return ctx.JSON(http.StatusOK, map[string]string{"status": "success"})
+		//return ctx.NoContent(http.StatusOK)
 	}
 }
