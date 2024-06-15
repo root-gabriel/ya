@@ -93,9 +93,9 @@ func (h *handler) AllMetricsValues() echo.HandlerFunc {
 		}
 
 		return nil*/
-        ctx.Response().Header().Set("Content-Type", "application/json")
-        return ctx.JSON(http.StatusOK, h.store.AllMetrics())
-	}
+        ctx.Response().Header().Set("Content-Type", "text/html")
+        return ctx.String(http.StatusOK, h.store.AllMetrics())	
+    }
 }
 
 func (h *handler) UpdateJSON() echo.HandlerFunc {
