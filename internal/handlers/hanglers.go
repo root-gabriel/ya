@@ -69,22 +69,23 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 }
 
 func (h *handler) MetricsValue() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		typeM := ctx.Param("typeM")
-		nameM := ctx.Param("nameM")
+    return func(ctx echo.Context) error {
+        typeM := ctx.Param("typeM")
+        nameM := ctx.Param("nameM")
 
-		// Логирование заголовков
-		zap.S().Infof("Request Headers: %v", ctx.Request().Header)
+        val, status := h.store.GetValue(typeM, nameM)
+        if status != http.StatusOK {
+            return ctx.JSON(status, map[string]string{"error": "Metric not found"})
+        }
 
-		val, status := h.store.GetValue(typeM, nameM)
-		if status != http.StatusOK {
-			ctx.Response().Header().Set("Content-Type", "application/json")
-			return ctx.JSON(status, map[string]string{"error": "Metric not found"})
-		}
+        acceptHeader := ctx.Request().Header.Get("Accept")
+        if strings.Contains(acceptHeader, "application/json") {
+            return ctx.JSON(status, map[string]string{"value": val})
+        }
 
-		ctx.Response().Header().Set("Content-Type", "application/json")
-		return ctx.JSON(status, map[string]string{"value": val})
-	}
+        ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
+        return ctx.String(status, val)
+    }
 }
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
