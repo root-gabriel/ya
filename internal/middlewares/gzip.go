@@ -3,13 +3,11 @@ package middlewares
 import (
 	"compress/gzip"
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
 )
-
-// compressWriter реализует интерфейс http.ResponseWriter и позволяет прозрачно для сервера
-// сжимать передаваемые данные и выставлять правильные HTTP-заголовки
 type compressWriter struct {
 	w  http.ResponseWriter
 	zw *gzip.Writer
@@ -37,13 +35,10 @@ func (c *compressWriter) WriteHeader(statusCode int) {
 	c.w.WriteHeader(statusCode)
 }
 
-// Close закрывает gzip.Writer и досылает все данные из буфера.
 func (c *compressWriter) Close() error {
 	return c.zw.Close()
 }
 
-// compressReader реализует интерфейс io.ReadCloser и позволяет прозрачно для сервера
-// декомпрессировать получаемые от клиента данные
 type compressReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
@@ -78,6 +73,9 @@ func GzipUnpacking() echo.MiddlewareFunc {
 			req := ctx.Request()
 			rw := ctx.Response().Writer
 			header := req.Header
+
+			zap.S().Infof("Request Headers before gzip processing: %v", header)
+
 			if strings.Contains(header.Get("Accept-Encoding"), "gzip") {
 				cw := newCompressWriter(rw)
 				ctx.Response().Writer = cw
@@ -92,6 +90,7 @@ func GzipUnpacking() echo.MiddlewareFunc {
 				ctx.Request().Body = cr
 				defer cr.Close()
 			}
+
 			if err = next(ctx); err != nil {
 				ctx.Error(err)
 			}
