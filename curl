@@ -4,5 +4,12 @@ curl -X POST "http://localhost:8080/update/counter/testCounter/100" -H "Content-
 curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept: application/json"
 curl -X POST "http://localhost:8080/update/gauge/testGauge/100.5" -H "Content-Type: application/json" -H "Accept: application/json"
 curl -X GET "http://localhost:8080/value/gauge/testGauge" -H "Accept: application/json"
-curl -X POST "http://localhost:8080/update/" -H "Content-Type: application/json" -H "Accept: application/json" -
+curl -X POST "http://localhost:8080/update/" -H "Content-Type: application/json" -H "Accept: application/json" -d '{"id": "testCounter", "type": "counter", "delta": 100}'
+curl -X POST "http://localhost:8080/value/" -H "Content-Type: application/json" -H "Accept: application/json" -d '{"id": "testCounter", "type": "counter"}'
+curl -X POST "http://localhost:8080/updates/" -H "Content-Type: application/json" -H "Accept: application/json" -d '[{"id": "testCounter", "type": "counter", "delta": 100}, {"id": "testGauge", "type": "gauge", "value": 200.5}]'
+curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept-Encoding: gzip" --compressed
+curl -X POST "http://localhost:8080/update/counter/testCounter/100" -H "Content-Type: application/json" -H "Accept-Encoding: gzip" --compressed
+curl -X GET "http://localhost:8080/ping"
+curl -X GET "http://localhost:8080/" -H "Accept: application/json"
+
 

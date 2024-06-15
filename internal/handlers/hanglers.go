@@ -35,64 +35,63 @@ func New(stor *storage.MemStorage) *handler {
 }
 
 func (h *handler) UpdateMetrics() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		metricsType := ctx.Param("typeM")
-		metricsName := ctx.Param("nameM")
-		metricsValue := ctx.Param("valueM")
+    return func(ctx echo.Context) error {
+        metricsType := ctx.Param("typeM")
+        metricsName := ctx.Param("nameM")
+        metricsValue := ctx.Param("valueM")
 
-		zap.S().Infof("Request Headers: %v", ctx.Request().Header)
+        zap.S().Infof("Request Headers: %v", ctx.Request().Header)
 
-		switch metricsType {
-		case "counter":
-			value, err := strconv.ParseInt(metricsValue, 10, 64)
-			if err != nil {
-				return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("%s cannot be converted to an integer", metricsValue)})
-			}
-			h.store.UpdateCounter(metricsName, value)
-		case "gauge":
-			value, err := strconv.ParseFloat(metricsValue, 64)
-			if err != nil {
-				return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("%s cannot be converted to a float", metricsValue)})
-			}
-			h.store.UpdateGauge(metricsName, value)
-		default:
-			return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
-		}
+        switch metricsType {
+        case "counter":
+            value, err := strconv.ParseInt(metricsValue, 10, 64)
+            if err != nil {
+                return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("%s cannot be converted to an integer", metricsValue)})
+            }
+            h.store.UpdateCounter(metricsName, value)
+        case "gauge":
+            value, err := strconv.ParseFloat(metricsValue, 64)
+            if err != nil {
+                return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("%s cannot be converted to a float", metricsValue)})
+            }
+            h.store.UpdateGauge(metricsName, value)
+        default:
+            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
+        }
 
-		acceptHeader := ctx.Request().Header.Get("Accept")
-		zap.S().Infof("Accept Header: %s", acceptHeader)
+        acceptHeader := ctx.Request().Header.Get("Accept")
+        zap.S().Infof("Accept Header: %s", acceptHeader)
 
-		if acceptHeader == "application/json" {
-			return ctx.JSON(http.StatusOK, map[string]string{"status": "success"})
-		}
+        if strings.Contains(acceptHeader, "application/json") {
+            return ctx.JSON(http.StatusOK, map[string]string{"status": "success"})
+        }
 
-		return ctx.String(http.StatusOK, "success")
-	}
+        return ctx.String(http.StatusOK, "success")
+    }
 }
 
 func (h *handler) MetricsValue() echo.HandlerFunc {
-	return func(ctx echo.Context) error {
-		typeM := ctx.Param("typeM")
-		nameM := ctx.Param("nameM")
+    return func(ctx echo.Context) error {
+        typeM := ctx.Param("typeM")
+        nameM := ctx.Param("nameM")
 
-		// Логирование заголовков
-		zap.S().Infof("Request Headers: %v", ctx.Request().Header)
+        zap.S().Infof("Request Headers: %v", ctx.Request().Header)
 
-		val, status := h.store.GetValue(typeM, nameM)
-		if status != http.StatusOK {
-			return ctx.JSON(status, map[string]string{"error": "Metric not found"})
-		}
+        val, status := h.store.GetValue(typeM, nameM)
+        if status != http.StatusOK {
+            return ctx.JSON(status, map[string]string{"error": "Metric not found"})
+        }
 
-		acceptHeader := ctx.Request().Header.Get("Accept")
-		zap.S().Infof("Accept Header: %s", acceptHeader)
+        acceptHeader := ctx.Request().Header.Get("Accept")
+        zap.S().Infof("Accept Header: %s", acceptHeader)
 
-		if acceptHeader == "application/json" {
-			return ctx.JSON(status, map[string]string{"value": val})
-		}
+        if strings.Contains(acceptHeader, "application/json") {
+            return ctx.JSON(status, map[string]string{"value": val})
+        }
 
-		ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
-		return ctx.String(status, val)
-	}
+        ctx.Response().Header().Set("Content-Type", "text/plain; charset=UTF-8")
+        return ctx.String(status, val)
+    }
 }
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
