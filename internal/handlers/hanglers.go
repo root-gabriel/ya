@@ -43,17 +43,20 @@ func (h *handler) UpdateMetrics() echo.HandlerFunc {
 		case "counter":
 			value, err := strconv.ParseInt(metricsValue, 10, 64)
 			if err != nil {
-				return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to an integer", metricsValue))
+				//return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to an integer", metricsValue))
+                return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("%s cannot be converted to an integer", metricsValue)})
 			}
 			h.store.UpdateCounter(metricsName, value)
 		case "gauge":
 			value, err := strconv.ParseFloat(metricsValue, 64)
 			if err != nil {
-				return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to a float", metricsValue))
+				//return ctx.String(http.StatusBadRequest, fmt.Sprintf("%s cannot be converted to a float", metricsValue))
+                return ctx.JSON(http.StatusBadRequest, map[string]string{"error": fmt.Sprintf("%s cannot be converted to a float", metricsValue)})
 			}
 			h.store.UpdateGauge(metricsName, value)
 		default:
-			return ctx.String(http.StatusBadRequest, "Invalid metric type. Can only be 'gauge' or 'counter'")
+			//return ctx.String(http.StatusBadRequest, "Invalid metric type. Can only be 'gauge' or 'counter'")
+            return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
 		}
 
         ctx.Response().Header().Set("Content-Type", "application/json")
