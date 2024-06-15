@@ -7,41 +7,47 @@ import (
 	"github.com/lionslon/go-yapmetrics/internal/middlewares"
 	"github.com/lionslon/go-yapmetrics/internal/storage"
 	"go.uber.org/zap"
+	"log"
 )
 
 type APIServer struct {
-	Cfg             *config.ServerConfig
-	echo            *echo.Echo
-	st              *storage.MemStorage
-	storageProvider storage.StorageWorker
+	cfg  *config.ServerConfig
+	echo *echo.Echo
+	st   *storage.MemStorage
 }
 
 func New() *APIServer {
 	apiS := &APIServer{}
 	cfg := config.NewServer()
-	apiS.Cfg = cfg
+	apiS.cfg = cfg
 	apiS.echo = echo.New()
 	apiS.st = storage.NewMem()
 
+	handler := handlers.New(apiS.st)
+	logger, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(logger)
+	defer logger.Sync()
+
+	var storageProvider storage.StorageWorker
 	var err error
 	switch cfg.GetProvider() {
 	case storage.FileProvider:
-		apiS.storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
+		storageProvider = storage.NewFileProvider(cfg.FilePath, cfg.StoreInterval, apiS.st)
 	case storage.DBProvider:
-		apiS.storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
+		storageProvider, err = storage.NewDBProvider(cfg.DatabaseDSN, cfg.StoreInterval, apiS.st)
 	}
 	if err != nil {
 		zap.S().Error(err)
 	}
 	if cfg.Restore {
-		err := apiS.storageProvider.Restore()
+		err := storageProvider.Restore()
 		if err != nil {
 			zap.S().Error(err)
 		}
 	}
 
 	if cfg.StoreIntervalNotZero() {
-		go apiS.storageProvider.IntervalDump()
+		go storageProvider.IntervalDump()
 	}
 
 	apiS.echo.Use(middlewares.WithLogging())
@@ -50,26 +56,22 @@ func New() *APIServer {
 		apiS.echo.Use(middlewares.CheckSignReq(cfg.SignPass))
 	}
 
+	apiS.echo.GET("/", handler.AllMetricsValues())
+	apiS.echo.POST("/value/", handler.GetValueJSON())
+	apiS.echo.GET("/value/:typeM/:nameM", handler.MetricsValue())
+	apiS.echo.POST("/update/", handler.UpdateJSON())
+	apiS.echo.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
+	apiS.echo.POST("/updates/", handler.UpdatesJSON())
+	apiS.echo.GET("/ping", handler.PingDB(storageProvider))
+
 	return apiS
 }
 
-func (a *APIServer) RegisterRoutes(e *echo.Echo) {
-	handler := handlers.New(a.st)
-	e.GET("/", handler.AllMetricsValues())
-	e.POST("/value/", handler.GetValueJSON())
-	e.GET("/value/:typeM/:nameM", handler.MetricsValue())
-	e.POST("/update/", handler.UpdateJSON())
-	e.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetrics())
-	e.POST("/updates/", handler.UpdatesJSON())
-	e.GET("/ping", handler.PingDB(a.storageProvider))
-}
-
 func (a *APIServer) Start() error {
-	err := a.echo.Start(a.Cfg.Addr)
+	err := a.echo.Start(a.cfg.Addr)
 	if err != nil {
-		zap.S().Fatal(err)
+		log.Fatal(err)
 	}
 
 	return nil
 }
-
