@@ -11,7 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-    "strings"
+	"strings"
 )
 
 type storageUpdater interface {
@@ -78,20 +78,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 		acceptHeader := ctx.Request().Header.Get("Accept")
 		if acceptHeader == "application/json" {
-			if typeM == "counter" {
-				delta, err := strconv.ParseInt(val, 10, 64)
-				if err != nil {
-					return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse counter value"})
-				}
-				return ctx.JSON(status, map[string]interface{}{"id": nameM, "type": typeM, "delta": delta})
-			}
-			if typeM == "gauge" {
-				value, err := strconv.ParseFloat(val, 64)
-				if err != nil {
-					return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse gauge value"})
-				}
-				return ctx.JSON(status, map[string]interface{}{"id": nameM, "type": typeM, "value": value})
-			}
+			return ctx.JSON(status, map[string]string{"value": val})
 		}
 
 		return ctx.String(status, val)
@@ -100,48 +87,23 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		metrics := h.store.AllMetrics()
-
 		acceptHeader := ctx.Request().Header.Get("Accept")
 		if acceptHeader == "application/json" {
-			metricsMap := make(map[string]interface{})
-			
-			metricsList := strings.Split(metrics, "\n")
-			for _, metric := range metricsList {
-				if metric == "" {
+			metrics := make(map[string]string)
+			for _, line := range strings.Split(h.store.AllMetrics(), "\n") {
+				if line == "" {
 					continue
 				}
-				parts := strings.Split(metric, " = ")
-				if len(parts) != 2 {
-					continue
-				}
-				metricName := strings.TrimSpace(parts[0])
-				metricValue := strings.TrimSpace(parts[1])
-				if strings.HasPrefix(metricName, "- ") {
-					metricName = metricName[2:]
-				}
-				if strings.HasPrefix(metricName, "gauge") {
-					value, err := strconv.ParseFloat(metricValue, 64)
-					if err != nil {
-						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse gauge value"})
-					}
-					metricsMap[metricName] = value
-				} else if strings.HasPrefix(metricName, "counter") {
-					value, err := strconv.ParseInt(metricValue, 10, 64)
-					if err != nil {
-						return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to parse counter value"})
-					}
-					metricsMap[metricName] = value
-				} else {
-					metricsMap[metricName] = metricValue
+				parts := strings.Split(line, " = ")
+				if len(parts) == 2 {
+					metrics[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 				}
 			}
-
-			return ctx.JSON(http.StatusOK, metricsMap)
+			return ctx.JSON(http.StatusOK, metrics)
 		}
 
 		ctx.Response().Header().Set("Content-Type", "text/html")
-		return ctx.String(http.StatusOK, metrics)
+		return ctx.String(http.StatusOK, h.store.AllMetrics())
 	}
 }
 
