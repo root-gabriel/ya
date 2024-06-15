@@ -70,10 +70,11 @@ func (c *compressReader) Close() error {
 
 func GzipUnpacking() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx echo.Context) (err error) {
+		return func(ctx echo.Context) error {
 			req := ctx.Request()
 			rw := ctx.Response().Writer
 			header := req.Header
+
 			zap.S().Infof("Request Headers before gzip processing: %v", header)
 
 			if strings.Contains(header.Get("Accept-Encoding"), "gzip") {
@@ -90,11 +91,11 @@ func GzipUnpacking() echo.MiddlewareFunc {
 				ctx.Request().Body = cr
 				defer cr.Close()
 			}
-			if err = next(ctx); err != nil {
+			if err := next(ctx); err != nil {
 				ctx.Error(err)
 			}
 
-			return err
+			return nil
 		}
 	}
 }
