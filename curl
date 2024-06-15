@@ -1,15 +1,62 @@
 #!/bin/bash
 
-curl -X POST "http://localhost:8080/update/counter/testCounter/100" -H "Content-Type: application/json" -H "Accept: application/json"
-curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept: application/json"
-curl -X POST "http://localhost:8080/update/gauge/testGauge/100.5" -H "Content-Type: application/json" -H "Accept: application/json"
-curl -X GET "http://localhost:8080/value/gauge/testGauge" -H "Accept: application/json"
-curl -X POST "http://localhost:8080/update/" -H "Content-Type: application/json" -H "Accept: application/json" -d '{"id": "testCounter", "type": "counter", "delta": 100}'
-curl -X POST "http://localhost:8080/value/" -H "Content-Type: application/json" -H "Accept: application/json" -d '{"id": "testCounter", "type": "counter"}'
-curl -X POST "http://localhost:8080/updates/" -H "Content-Type: application/json" -H "Accept: application/json" -d '[{"id": "testCounter", "type": "counter", "delta": 100}, {"id": "testGauge", "type": "gauge", "value": 200.5}]'
-curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept-Encoding: gzip" --compressed
-curl -X POST "http://localhost:8080/update/counter/testCounter/100" -H "Content-Type: application/json" -H "Accept-Encoding: gzip" --compressed
-curl -X GET "http://localhost:8080/ping"
-curl -X GET "http://localhost:8080/" -H "Accept: application/json"
+# Обновление метрики counter
+curl -X POST "http://localhost:8080/update/counter/testCounter/100" -H "Content-Type: application/json"
+# Ожидаемый результат: {"status":"success"}
+# Логи сервера: INFO	handlers/hanglers.go:67	Request Headers: map[Content-Type:[application/json] User-Agent:[curl/8.6.0]]
 
+sleep 2
+
+# Получение значения метрики counter
+curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept: application/json"
+# Ожидаемый результат: {"value":"3100"}
+# Логи сервера: INFO	handlers/hanglers.go:81	Request Headers: map[Accept:[application/json] User-Agent:[curl/8.6.0]]
+
+sleep 2
+
+# Получение значения метрики counter с использованием gzip
+curl -X GET "http://localhost:8080/value/counter/testCounter" -H "Accept-Encoding: gzip" --compressed
+# Ожидаемый результат: {"value":"3100"}
+# Логи сервера: INFO	handlers/hanglers.go:81	Request Headers: map[Accept-Encoding:[gzip] User-Agent:[curl/8.6.0]]
+
+sleep 2
+
+# Обновление метрики counter с использованием gzip
+echo '{"id": "testCounter", "type": "counter"}' | gzip | curl -X POST "http://localhost:8080/update/" -H "Content-Type: application/json" -H "Content-Encoding: gzip" --data-binary  --compressed
+# Ожидаемый результат: {"status":"success"}
+# Логи сервера: INFO	handlers/hanglers.go:67	Request Headers: map[Content-Encoding:[gzip] Content-Type:[application/json] User-Agent:[curl/8.6.0]]
+
+# Обновление метрики gauge
+curl -X POST "http://localhost:8080/update/gauge/testGauge/100.5" -H "Content-Type: application/json"
+# Ожидаемый результат: {"status":"success"}
+# Логи сервера: INFO	handlers/hanglers.go:67	Request Headers: map[Content-Type:[application/json] User-Agent:[curl/8.6.0]]
+
+# Получение значения метрики gauge
+curl -X GET "http://localhost:8080/value/gauge/testGauge" -H "Accept: application/json"
+# Ожидаемый результат: {"value":"100.5"}
+# Логи сервера: INFO	handlers/hanglers.go:81	Request Headers: map[Accept:[application/json] User-Agent:[curl/8.6.0]]
+
+# Получение значения метрики gauge с использованием gzip
+curl -X GET "http://localhost:8080/value/gauge/testGauge" -H "Accept-Encoding: gzip" --compressed
+# Ожидаемый результат: {"value":"100.5"}
+# Логи сервера: INFO	handlers/hanglers.go:81	Request Headers: map[Accept-Encoding:[gzip] User-Agent:[curl/8.6.0]]
+
+# Обновление метрики gauge с использованием gzip
+echo '{"id": "testGauge", "type": "gauge"}' | gzip | curl -X POST "http://localhost:8080/update/" -H "Content-Type: application/json" -H "Content-Encoding: gzip" --data-binary @- --compressed
+# Ожидаемый результат: {"status":"success"}
+# Логи сервера: INFO	handlers/hanglers.go:67	Request Headers: map[Content-Encoding:[gzip] Content-Type:[application/json] User-Agent:[curl/8.6.0]]
+
+# Получение всех метрик
+curl -X GET "http://localhost:8080/"
+# Ожидаемый результат:
+# Gauge metrics:
+# - testGauge = 100.5
+# Counter metrics:
+# - testCounter = 3100
+# Логи сервера: INFO	handlers/hanglers.go:67	Request Headers: map[User-Agent:[curl/8.6.0]]
+
+# Проверка базы данных
+curl -X GET "http://localhost:8080/ping"
+# Ожидаемый результат: Connection database is OK
+# Логи сервера: INFO	handlers/hanglers.go:67	Request Headers: map[User-Agent:[curl/8.6.0]]
 

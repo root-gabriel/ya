@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+    "go.uber.org/zap"
 )
 
 type storageUpdater interface {
@@ -69,6 +70,8 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 		typeM := ctx.Param("typeM")
 		nameM := ctx.Param("nameM")
 
+		zap.S().Infof("Request Headers: %v", ctx.Request().Header)
+
 		val, status := h.store.GetValue(typeM, nameM)
 		if status != http.StatusOK {
 			return ctx.JSON(status, map[string]string{"error": "Metric not found"})
@@ -76,7 +79,11 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 
 		acceptHeader := ctx.Request().Header.Get("Accept")
 		contentType := ctx.Request().Header.Get("Content-Type")
-		if strings.Contains(acceptHeader, "application/json") || strings.Contains(contentType, "application/json") {
+		zap.S().Infof("Accept Header: %s", acceptHeader)
+		zap.S().Infof("Content-Type Header: %s", contentType)
+
+		if strings.Contains(acceptHeader, "application/json") {
+			ctx.Response().Header().Set("Content-Type", "application/json")
 			return ctx.JSON(status, map[string]string{"value": val})
 		}
 
@@ -88,6 +95,7 @@ func (h *handler) MetricsValue() echo.HandlerFunc {
 func (h *handler) AllMetricsValues() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		acceptHeader := ctx.Request().Header.Get("Accept")
+		zap.S().Infof("Accept Header: %s", acceptHeader)
 		if strings.Contains(acceptHeader, "application/json") {
 			metrics := make(map[string]string)
 			for _, line := range strings.Split(h.store.AllMetrics(), "\n") {
@@ -99,6 +107,7 @@ func (h *handler) AllMetricsValues() echo.HandlerFunc {
 					metrics[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 				}
 			}
+			ctx.Response().Header().Set("Content-Type", "application/json")
 			return ctx.JSON(http.StatusOK, metrics)
 		}
 
@@ -132,6 +141,7 @@ func (h *handler) UpdateJSON() echo.HandlerFunc {
 
 func (h *handler) GetValueJSON() echo.HandlerFunc {
 	return func(ctx echo.Context) error {
+		ctx.Response().Header().Set("Content-Type", "application/json")
 		var metric models.Metrics
 		err := json.NewDecoder(ctx.Request().Body).Decode(&metric)
 		if err != nil {
@@ -149,7 +159,6 @@ func (h *handler) GetValueJSON() echo.HandlerFunc {
 			return ctx.JSON(http.StatusNotFound, map[string]string{"error": "Invalid metric type. Can only be 'gauge' or 'counter'"})
 		}
 
-		ctx.Response().Header().Set("Content-Type", "application/json")
 		return ctx.JSON(http.StatusOK, metric)
 	}
 }
