@@ -2,4 +2,4 @@
 
 git add .
 git commit -m "TEST"
-git psuh
+git push
