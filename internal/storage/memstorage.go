@@ -1,44 +1,43 @@
 package storage
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
 )
 
 type gauge float64
 type counter int64
 
 type MemStorage struct {
-	Gauges   map[string]gauge
-	Counters map[string]counter
+	GaugeData   map[string]gauge
+	CounterData map[string]counter
 }
 
-func NewMemStorage() *MemStorage {
+func NewMem() *MemStorage {
 	return &MemStorage{
-		Gauges:   make(map[string]gauge),
-		Counters: make(map[string]counter),
+		GaugeData:   make(map[string]gauge),
+		CounterData: make(map[string]counter),
 	}
 }
 
 func (s *MemStorage) UpdateCounter(name string, value int64) {
-	s.Counters[name] += counter(value)
+	s.CounterData[name] += counter(value)
 }
 
 func (s *MemStorage) UpdateGauge(name string, value float64) {
-	s.Gauges[name] = gauge(value)
+	s.GaugeData[name] = gauge(value)
 }
 
-func (s *MemStorage) GetValue(metricType, name string) (string, int) {
-	switch metricType {
-	case "counter":
-		if val, ok := s.Counters[name]; ok {
-			return strconv.FormatInt(int64(val), 10), http.StatusOK
-		}
-	case "gauge":
-		if val, ok := s.Gauges[name]; ok {
-			return strconv.FormatFloat(float64(val), 'f', -1, 64), http.StatusOK
-		}
+func (s *MemStorage) GetValue(t string, n string) (string, int) {
+	var v string
+	statusCode := http.StatusOK
+	if val, ok := s.GaugeData[n]; ok && t == "gauge" {
+		v = fmt.Sprint(val)
+	} else if val, ok := s.CounterData[n]; ok && t == "counter" {
+		v = fmt.Sprint(val)
+	} else {
+		statusCode = http.StatusNotFound
 	}
-	return "", http.StatusNotFound
+	return v, statusCode
 }
 

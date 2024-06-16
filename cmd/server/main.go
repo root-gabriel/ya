@@ -1,18 +1,20 @@
 package main
 
 import (
+	"log"
 	"github.com/labstack/echo/v4"
 	"github.com/root-gabriel/ya/internal/handlers"
 	"github.com/root-gabriel/ya/internal/storage"
 )
 
 func main() {
+	store := storage.NewMem()
+	handler := handlers.New(store)
+
 	e := echo.New()
-	memStorage := storage.NewMemStorage()
-	handler := handlers.NewHandler(memStorage)
+	e.POST("/update/:type/:name/:value", handler.UpdateMetrics())
+	e.GET("/value/:type/:name", handler.MetricsValue())
 
-	e.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetric)
-	e.GET("/value/:typeM/:nameM", handler.GetMetric)
-
-	e.Start(":8080")
+	log.Fatal(e.Start(":8080"))
 }
+

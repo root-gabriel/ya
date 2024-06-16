@@ -1,24 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"log"
 	"time"
+	"net/http"
 )
 
 func main() {
 	for {
-		resp, err := http.Post(
-			"http://localhost:8080/update/counter/testCounter/1",
-			"text/plain",
-			nil,
-		)
+		_, err := http.Get("http://localhost:8080/update/counter/testCounter/1")
 		if err != nil {
-			fmt.Println("Error:", err)
-		} else {
-			resp.Body.Close()
+			log.Println("Error updating counter:", err)
 		}
-
 		time.Sleep(10 * time.Second)
 	}
 }
