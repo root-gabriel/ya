@@ -1,54 +1,46 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
-	"github.com/labstack/echo/v4"
+
+	"github.com/gorilla/mux"
 	"github.com/root-gabriel/ya/internal/storage"
 )
 
-type Handler struct {
-	store *storage.MemStorage
-}
-
-func New(store *storage.MemStorage) *Handler {
-	return &Handler{store: store}
-}
-
-func (h *Handler) UpdateMetrics() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		metricType := c.Param("type")
-		metricName := c.Param("name")
-		metricValue := c.Param("value")
-
-		switch metricType {
-		case "counter":
-			value, err := strconv.ParseInt(metricValue, 10, 64)
-			if err != nil {
-				return c.String(http.StatusBadRequest, err.Error())
-			}
-			h.store.UpdateCounter(metricName, value)
-		case "gauge":
-			value, err := strconv.ParseFloat(metricValue, 64)
-			if err != nil {
-				return c.String(http.StatusBadRequest, err.Error())
-			}
-			h.store.UpdateGauge(metricName, value)
-		default:
-			return c.String(http.StatusBadRequest, "invalid metric type")
+// UpdateCounterHandler обновляет значение счетчика
+func UpdateCounterHandler(storage *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		valueStr := vars["value"]
+		value, err := strconv.ParseInt(valueStr, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid value", http.StatusBadRequest)
+			return
 		}
-
-		return c.String(http.StatusOK, "success")
+		storage.UpdateCounter(name, value)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("success"))
 	}
 }
 
-func (h *Handler) MetricsValue() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		metricType := c.Param("type")
-		metricName := c.Param("name")
+// GetCounterValueHandler получает значение счетчика
+func GetCounterValueHandler(storage *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		name := vars["name"]
+		value := storage.GetCounterValue(name)
+		json.NewEncoder(w).Encode(map[string]int64{"value": value})
+	}
+}
 
-		value, status := h.store.GetValue(metricType, metricName)
-		return c.String(status, value)
+// PingHandler проверяет доступность сервера
+func PingHandler(storage *storage.MemStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Pong"))
 	}
 }
 
