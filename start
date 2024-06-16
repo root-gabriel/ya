@@ -1,10 +1,12 @@
 #!/bin/bash
 
 echo "[INFO]: 'git add .'"
-git add .
+git add . 1>/dev/null
 
 echo "[INFO]: 'git commit -m \"TEST\"'"
-git commit -m "TEST"
+git commit -m "TEST" 1>/dev/null
 
 echo "[INFO]: 'git push'"
-git push
+git push 1>/dev/null
+
+echo "Complete!"
