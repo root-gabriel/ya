@@ -1,9 +1,0 @@
-BEGIN TRANSACTION;
-
-CREATE TABLE metrics(
-	"metrictype" TEXT NOT NULL,
-	"metricname" TEXT NOT NULL UNIQUE,
-	"counter" BIGINT,
-	"gauge" DOUBLE PRECISION);
-
-COMMIT;
