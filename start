@@ -1,5 +1,10 @@
 #!/bin/bash
 
+echo "[INFO]: 'git add .'"
 git add .
-git commit -m "Iter14"
+
+echo "[INFO]: 'git commit -m \"TEST\"'"
+git commit -m "TEST"
+
+echo "[INFO]: 'git push'"
 git push

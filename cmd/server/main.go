@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/root-gabriel/ya/internal/api"
+    "github.com/root-gabriel/ya/internal/api"
+    "log"
 )
 
 func main() {
-	s := api.New()
-	if err := s.Start(); err != nil {
-		panic(err)
-	}
+    server := api.NewServer()
+    if err := server.Start(); err != nil {
+        log.Fatal("Failed to start server: ", err)
+    }
 }
 
