@@ -1,43 +1,33 @@
 package storage
 
 import (
-	"fmt"
-	"net/http"
+	"sync"
 )
 
-type gauge float64
-type counter int64
-
+// MemStorage - структура для хранения метрик в памяти
 type MemStorage struct {
-	GaugeData   map[string]gauge
-	CounterData map[string]counter
+	mu       sync.RWMutex
+	counters map[string]int64
 }
 
+// NewMem создает новое хранилище в памяти
 func NewMem() *MemStorage {
 	return &MemStorage{
-		GaugeData:   make(map[string]gauge),
-		CounterData: make(map[string]counter),
+		counters: make(map[string]int64),
 	}
 }
 
+// UpdateCounter обновляет значение счетчика
 func (s *MemStorage) UpdateCounter(name string, value int64) {
-	s.CounterData[name] += counter(value)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.counters[name] += value
 }
 
-func (s *MemStorage) UpdateGauge(name string, value float64) {
-	s.GaugeData[name] = gauge(value)
-}
-
-func (s *MemStorage) GetValue(t string, n string) (string, int) {
-	var v string
-	statusCode := http.StatusOK
-	if val, ok := s.GaugeData[n]; ok && t == "gauge" {
-		v = fmt.Sprint(val)
-	} else if val, ok := s.CounterData[n]; ok && t == "counter" {
-		v = fmt.Sprint(val)
-	} else {
-		statusCode = http.StatusNotFound
-	}
-	return v, statusCode
+// GetCounterValue возвращает значение счетчика
+func (s *MemStorage) GetCounterValue(name string) int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.counters[name]
 }
 
