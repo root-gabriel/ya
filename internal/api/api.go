@@ -1,28 +1,23 @@
 package api
 
 import (
-    "github.com/labstack/echo/v4"
-    "github.com/root-gabriel/ya/internal/handlers"
-    "net/http"
+	"github.com/labstack/echo/v4"
+	"github.com/root-gabriel/ya/internal/handlers"
+	"github.com/root-gabriel/ya/internal/storage"
 )
 
 type Server struct {
-    echo *echo.Echo
+	handler *handlers.Handler
 }
 
 func NewServer() *Server {
-    server := &Server{
-        echo: echo.New(),
-    }
-    server.routes()
-    return server
+	storage := storage.NewMemStorage()
+	handler := handlers.NewHandler(storage)
+	return &Server{handler: handler}
 }
 
-func (s *Server) Start() error {
-    return s.echo.Start(":8080")
-}
-
-func (s *Server) routes() {
-    s.echo.GET("/value/counter/:name", handlers.GetCounter)
+func (s *Server) RegisterRoutes(e *echo.Echo) {
+	e.POST("/update/:typeM/:nameM/:valueM", s.handler.UpdateMetric)
+	e.GET("/value/:typeM/:nameM", s.handler.GetMetric)
 }
 

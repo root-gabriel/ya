@@ -1,14 +1,19 @@
 package main
 
 import (
-    "github.com/root-gabriel/ya/internal/api"
-    "log"
+	"github.com/labstack/echo/v4"
+	"github.com/root-gabriel/ya/internal/handlers"
+	"github.com/root-gabriel/ya/internal/storage"
 )
 
 func main() {
-    server := api.NewServer()
-    if err := server.Start(); err != nil {
-        log.Fatal("Failed to start server: ", err)
-    }
+	e := echo.New()
+	memStorage := storage.NewMemStorage()
+	handler := handlers.NewHandler(memStorage)
+
+	e.POST("/update/:typeM/:nameM/:valueM", handler.UpdateMetric)
+	e.GET("/value/:typeM/:nameM", handler.GetMetric)
+
+	e.Start(":8080")
 }
 
